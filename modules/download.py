@@ -10,6 +10,7 @@ from .xml import get_unique_xml_element
 from .misc import null
 import sys
 import time
+import datetime
 
 
 def reporthook(count, block_size, total_size):
@@ -26,15 +27,20 @@ def reporthook(count, block_size, total_size):
     sys.stdout.flush()
 
 
-def podcast_download(rss: Element, delay: int=0, output_dir: str='',
+def podcast_download(rss: Element,rss_source, last_pub, delay: int=0, output_dir: str='',
                      rename: bool=False, start=0, end=0, print_progress=null) -> dict:
 
     files_downloaded = 0
     file_errors = 0
     download_progress = []
-	
-	
-	
+
+    f = open("subs.txt", "w")
+    now = time.localtime()
+
+    print (now > last_pub)
+    f.write(rss_source + " " +str(time.strftime("%a, %d %b %Y %H:%M:%S %z", now)))
+    f.close()
+
     if output_dir:
         output_dir = os.path.join(os.getcwd(), output_dir)
 
@@ -47,13 +53,12 @@ def podcast_download(rss: Element, delay: int=0, output_dir: str='',
     items = rss.findall('channel/item')
     items.reverse()
 	
+
+    if not (start == 0 and end == 0):
+        items = items[int(start): int(end)]
+	
     total_files = len(items)
 
-    if start == 0 and end == 0:
-        items = items
-    else:
-        items = items[int(start), int(end) * -1]
-	
 	
     file_number = 0
     
@@ -68,8 +73,10 @@ def podcast_download(rss: Element, delay: int=0, output_dir: str='',
         print_progress(f'Downloading {str(file_number)} of {str(total_files)}: "{episode.title}"')
              
         filename = f'{str_to_filename(episode.title)}.{str_to_filename(episode.file_extension)}'
- 
+
         filepath = os.path.join(output_dir, filename)
+        if os.path.exists(filepath):
+            continue
 
         try:
             request.urlretrieve(episode.url, filepath, reporthook)
